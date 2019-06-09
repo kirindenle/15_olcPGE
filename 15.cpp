@@ -4,8 +4,10 @@
 #include <iostream>
 #include <algorithm>
 #include <random>
-//#include <cstdlib>
-//#include <cstdlib>
+
+const int FIELD_HEIGHT = 4;
+const int TABLE_SIZE = FIELD_HEIGHT * FIELD_HEIGHT;
+const int EMPTY_INDEX = TABLE_SIZE - 1;
 
 class game15 : public olc::PixelGameEngine
 {
@@ -16,32 +18,39 @@ public:
     bool OnUserUpdate(float fElapsedTime) override;
     int width() const
     {
-        return pic.width;
+        return pic_width;
     }
     int height() const
     {
-        return pic.height;
+        return pic_height;
     }
 private:
     void DrawField()
     {
-        for (int i = 0; i < _countof(table.table); ++i)
+        //Clear(olc::BLACK);
+        for (int i = 0; i < TABLE_SIZE; ++i)
         {
-            int x = (table[i] % 4) * width() / 4;
-            int y = (table[i] / 4) * height() / 4;
-            if (i == 15)
+            int x = (table[i] % FIELD_HEIGHT) * width() / FIELD_HEIGHT;
+            int y = (table[i] / FIELD_HEIGHT) * height() / FIELD_HEIGHT;
+            if (i == EMPTY_INDEX)
             {
-                FillRect(x, y, width() / 4, height() / 4, olc::BLACK);
+                FillRect(x, y, width() / FIELD_HEIGHT, height() / FIELD_HEIGHT, olc::BLACK);
                 continue;
             }
             DrawSprite(x, y, cells[i], 1);
-            DrawRect(x + 1, y + 1, width() / 4 - 2, height() / 4 - 2, table[i] == i ? olc::GREEN : olc::RED);
+            DrawRect(x + 1, y + 1,
+                cells[i]->width - 2, cells[i]->height - 2,
+                table[i] == i ? olc::GREEN : olc::RED);
+            DrawRect(x + 2, y + 2,
+                cells[i]->width - 4, cells[i]->height - 4,
+                table[i] == i ? olc::GREEN : olc::RED);
+            
         }
     }
 
     void Restart()
     {
-        for (short i = 0; i < _countof(table.table); ++i)
+        for (short i = 0; i < TABLE_SIZE; ++i)
         {
             table.table[i] = i;
             table.antitable[i] = i;
@@ -52,7 +61,7 @@ private:
 
     bool Solved()
     {
-        for (int i = 0; i < _countof(table.table); ++i)
+        for (int i = 0; i < TABLE_SIZE; ++i)
         {
             if (i != table[i])
             {
@@ -64,8 +73,8 @@ private:
 
     struct Table
     {
-        short table[16];
-        short antitable[16];
+        short table[TABLE_SIZE];
+        short antitable[TABLE_SIZE];
         short operator [](int i)
         {
             return table[i];
@@ -80,31 +89,33 @@ private:
 
         void Shuffle()
         {
-            std::shuffle(table, table + _countof(table), std::mt19937(std::random_device()()));
+            std::shuffle(table, table + TABLE_SIZE, std::mt19937(std::random_device()()));
 
-            for (int i = 0; i < _countof(table); ++i)
+            for (int i = 0; i < TABLE_SIZE; ++i)
             {
                 antitable[table[i]] = i;
             }
 
             int inverses = 0;
-            for (int i = 0; i < _countof(table); ++i)
+            for (int i = 0; i < TABLE_SIZE; ++i)
             {
-                for (int j = i + 1; j < _countof(table); ++j)
+                for (int j = i + 1; j < TABLE_SIZE; ++j)
                 {
-                    if (antitable[i] != 15 && antitable[j] != 15 && antitable[i] > antitable[j])
+                    if (antitable[i] != EMPTY_INDEX 
+                        && antitable[j] != EMPTY_INDEX 
+                        && antitable[i] > antitable[j])
                     {
                         ++inverses;
                     }
                 }
             }
 
-            inverses += table[15] / 4 + 1;
+            inverses += table[EMPTY_INDEX] / FIELD_HEIGHT + 1;
 
             if (inverses % 2 == 1)
             {
                 int i = 0;
-                while (antitable[i] == 15 || antitable[i + 1] == 15)
+                while (antitable[i] == EMPTY_INDEX || antitable[i + 1] == EMPTY_INDEX)
                     ++i;
                 swap(i, i + 1);
             }
@@ -113,32 +124,35 @@ private:
 
     Table table;
     olc::Sprite pic;
-    olc::Sprite * cells[16];
+    int pic_width;
+    int pic_height;
+    olc::Sprite * cells[TABLE_SIZE];
 };
 
 game15::game15(std::string fileName) : pic(fileName)
 {
     Restart();
 
-    pic.width -= pic.width % 4;
-    pic.height -= pic.height % 4;
+    pic_width = pic.width - pic.width % FIELD_HEIGHT;
+    pic_height = pic.height - pic.height % FIELD_HEIGHT;
 
-    int cell_w = pic.width / 4;
-    int cell_h = pic.height / 4;
+    int cell_w = pic_width / FIELD_HEIGHT;
+    int cell_h = pic_height / FIELD_HEIGHT;
 
-    for (short i = 0; i < _countof(cells); ++i)
+    for (short i = 0; i < TABLE_SIZE; ++i)
     {
         cells[i] = new olc::Sprite(cell_w, cell_h);
         for (int k = 0; k < cell_h; ++k)
         {
             for (int l = 0; l < cell_w; ++l)
             {
-                cells[i]->SetPixel(l, k, pic.GetPixel((i % 4) * cell_w + l, (i / 4) * cell_h + k));
+                cells[i]->SetPixel(l, k, 
+                    pic.GetPixel((i % FIELD_HEIGHT) * cell_w + l, (i / FIELD_HEIGHT) * cell_h + k));
             }
         }
     }
 
-    Construct(pic.width, pic.height, 1, 1);
+    Construct(pic_width, pic_height, 1, 1);
     Start();
 }
 
@@ -152,12 +166,12 @@ void game15::PuzzleStep()
 {
     if (GetMouse(0).bReleased)
     {
-        int mx = GetMouseX() / (width() / 4);
-        int my = GetMouseY() / (height() / 4);
-        int mpos = my * 4 + mx;
+        int mx = GetMouseX() / (width() / FIELD_HEIGHT);
+        int my = GetMouseY() / (height() / FIELD_HEIGHT);
+        int mpos = my * FIELD_HEIGHT + mx;
         //std::cerr << mx << my << " " << mpos << " " << table.antitable[mpos] << std::endl;
-        int ex = table[15] % 4;
-        int ey = table[15] / 4;
+        int ex = table[EMPTY_INDEX] % FIELD_HEIGHT;
+        int ey = table[EMPTY_INDEX] / FIELD_HEIGHT;
         if (mx == ex && my == ey)
         {
             return;
@@ -167,15 +181,15 @@ void game15::PuzzleStep()
             int sign = my > ey ? 1 : -1;
             for (int iy = ey + sign; iy != my + sign; iy += sign)
             {
-                table.swap(iy * 4 + mx, table[15]);
+                table.swap(iy * FIELD_HEIGHT + mx, table[EMPTY_INDEX]);
             }
         }
-        else if (my == table[15] / 4)
+        else if (my == table[EMPTY_INDEX] / FIELD_HEIGHT)
         {
             int sign = mx > ex ? 1 : -1;
             for (int ix = ex + sign; ix != mx + sign; ix += sign)
             {
-                table.swap(my * 4 + ix, table[15]);
+                table.swap(my * FIELD_HEIGHT + ix, table[EMPTY_INDEX]);
             }
         }
         DrawField();
