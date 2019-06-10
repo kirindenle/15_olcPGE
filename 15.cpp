@@ -1,7 +1,6 @@
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngine.h"
 
-#include <iostream>
 #include <algorithm>
 #include <random>
 
@@ -189,7 +188,6 @@ void game15::PuzzleStep()
         int mx = GetMouseX() / (width() / FIELD_HEIGHT);
         int my = GetMouseY() / (height() / FIELD_HEIGHT);
         int mpos = my * FIELD_HEIGHT + mx;
-        //std::cerr << mx << my << " " << mpos << " " << table.antitable[mpos] << std::endl;
         int ex = table[EMPTY_INDEX] % FIELD_HEIGHT;
         int ey = table[EMPTY_INDEX] / FIELD_HEIGHT;
         if (mx == ex && my == ey)
@@ -230,7 +228,6 @@ bool game15::OnUserUpdate(float fElapsedTime)
         break;
     case PLAY:
         PuzzleStep();
-        //for (int i = 0; i < 16; ++i)table.table[i] = i;
         if (Solved())
         {
             state = WIN;
