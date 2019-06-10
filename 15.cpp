@@ -14,8 +14,10 @@ class game15 : public olc::PixelGameEngine
 public:
     explicit game15(std::string fileName);
     bool OnUserCreate() override;
+    bool OnUserDestroy() override;
     void PuzzleStep();
     bool OnUserUpdate(float fElapsedTime) override;
+    bool UpdateGraphics() override;
     int width() const
     {
         return pic_width;
@@ -25,6 +27,8 @@ public:
         return pic_height;
     }
 private:
+    bool update_graphics = true;
+
     void DrawField()
     {
         //Clear(olc::BLACK);
@@ -46,6 +50,7 @@ private:
                 table[i] == i ? olc::GREEN : olc::RED);
             
         }
+        update_graphics = true;
     }
 
     void Restart()
@@ -122,6 +127,15 @@ private:
         }
     };
 
+    enum State
+    {
+        WIN,
+        PLAY,
+        START
+    };
+
+    State state = START;
+
     Table table;
     olc::Sprite pic;
     int pic_width;
@@ -152,13 +166,19 @@ game15::game15(std::string fileName) : pic(fileName)
         }
     }
 
-    Construct(pic_width, pic_height, 1, 1);
+    Construct(pic_width, pic_height, 1, 1, false);
     Start();
 }
 
 bool game15::OnUserCreate()
 {
     DrawField();
+    return true;
+}
+
+bool game15::OnUserDestroy()
+{
+    delete[] cells;
     return true;
 }
 
@@ -199,13 +219,44 @@ void game15::PuzzleStep()
 
 bool game15::OnUserUpdate(float fElapsedTime)
 {
-    PuzzleStep();
-    if (Solved())
+    update_graphics = false;
+    if (GetKey(olc::ESCAPE).bReleased)
+        return false;
+    switch (state)
     {
-        Restart();
-        DrawField();
+    case START:
+        update_graphics = true;
+        state = PLAY;
+        break;
+    case PLAY:
+        PuzzleStep();
+        //for (int i = 0; i < 16; ++i)table.table[i] = i;
+        if (Solved())
+        {
+            state = WIN;
+            DrawSprite(0, 0, &pic, 1);
+            DrawString(0, 0, "YOU WIN!", {0,180,0}, 10);
+            DrawString(2, 2, "YOU WIN!", {0,230,0}, 10);
+            update_graphics = true;
+        }
+        break;
+    case WIN:
+        if (GetMouse(0).bReleased)
+        {
+            Restart();
+            DrawField();
+            state = START;
+        }
+        break;
+    default:
+        return false;
     }
     return true;
+}
+
+bool game15::UpdateGraphics()
+{
+    return update_graphics;
 }
 
 

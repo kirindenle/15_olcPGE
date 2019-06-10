@@ -399,6 +399,8 @@ namespace olc // All OneLoneCoder stuff will now exist in the "olc" namespace
         // Called once on application termination, so you can be a clean coder
         virtual bool OnUserDestroy();
 
+        virtual bool UpdateGraphics();
+
     public: // Hardware Interfaces
         // Returns true if window is currently in focus
         bool IsFocused();
@@ -1645,6 +1647,12 @@ namespace olc
     {
         return true;
     }
+
+    inline bool PixelGameEngine::UpdateGraphics()
+    {
+        return true;
+    }
+
     //////////////////////////////////////////////////////////////////
 
     void PixelGameEngine::olc_UpdateViewport()
@@ -1820,7 +1828,7 @@ namespace olc
                     }
                 }
 #endif
-
+                
                 // Handle User Input - Keyboard
                 for (int i = 0; i < 256; i++)
                 {
@@ -1883,27 +1891,31 @@ namespace olc
                 if (!OnUserUpdate(fElapsedTime))
                     bAtomActive = false;
 
-                // Display Graphics
-                glViewport(nViewX, nViewY, nViewW, nViewH);
 
-                // TODO: This is a bit slow (especially in debug, but 100x faster in release mode???)
-                // Copy pixel array into texture
-                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, nScreenWidth, nScreenHeight, GL_RGBA, GL_UNSIGNED_BYTE, pDefaultDrawTarget->GetData());
+                if (UpdateGraphics())
+                {
+                    // Display Graphics
+                    glViewport(nViewX, nViewY, nViewW, nViewH);
 
-                // Display texture on screen
-                glBegin(GL_QUADS);
-                glTexCoord2f(0.0, 1.0); glVertex3f(-1.0f + (fSubPixelOffsetX), -1.0f + (fSubPixelOffsetY), 0.0f);
-                glTexCoord2f(0.0, 0.0); glVertex3f(-1.0f + (fSubPixelOffsetX), 1.0f + (fSubPixelOffsetY), 0.0f);
-                glTexCoord2f(1.0, 0.0); glVertex3f(1.0f + (fSubPixelOffsetX), 1.0f + (fSubPixelOffsetY), 0.0f);
-                glTexCoord2f(1.0, 1.0); glVertex3f(1.0f + (fSubPixelOffsetX), -1.0f + (fSubPixelOffsetY), 0.0f);
-                glEnd();
+                    // TODO: This is a bit slow (especially in debug, but 100x faster in release mode???)
+                    // Copy pixel array into texture
+                    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, nScreenWidth, nScreenHeight, GL_RGBA, GL_UNSIGNED_BYTE, pDefaultDrawTarget->GetData());
 
-                // Present Graphics to screen
+                    // Display texture on screen
+                    glBegin(GL_QUADS);
+                    glTexCoord2f(0.0, 1.0); glVertex3f(-1.0f + (fSubPixelOffsetX), -1.0f + (fSubPixelOffsetY), 0.0f);
+                    glTexCoord2f(0.0, 0.0); glVertex3f(-1.0f + (fSubPixelOffsetX), 1.0f + (fSubPixelOffsetY), 0.0f);
+                    glTexCoord2f(1.0, 0.0); glVertex3f(1.0f + (fSubPixelOffsetX), 1.0f + (fSubPixelOffsetY), 0.0f);
+                    glTexCoord2f(1.0, 1.0); glVertex3f(1.0f + (fSubPixelOffsetX), -1.0f + (fSubPixelOffsetY), 0.0f);
+                    glEnd();
+
+                    // Present Graphics to screen
 #ifdef _WIN32
-                SwapBuffers(glDeviceContext);
+                    SwapBuffers(glDeviceContext);
 #else
-                glXSwapBuffers(olc_Display, olc_Window);
+                    glXSwapBuffers(olc_Display, olc_Window);
 #endif
+                }
 
                 // Update Title Bar
                 fFrameTimer += fElapsedTime;
@@ -1924,6 +1936,7 @@ namespace olc
 #endif
                     nFrameCount = 0;
                 }
+                
             }
 
             // Allow the user to free resources if they have overrided the destroy function
